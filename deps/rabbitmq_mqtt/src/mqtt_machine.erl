@@ -70,16 +70,18 @@ apply(_Meta, {down, DownPid, noconnection}, State) ->
     {State, ok, Effect};
 
 apply(Meta, {down, DownPid, _}, #machine_state{client_ids = Ids} = State0) ->
-    Ids1 = maps:filter(fun (_ClientId, Pid) when Pid =:= DownPid ->
-                               false;
-                            (_, _) ->
-                               true
-                       end, Ids),
+    {Delta, Ids1} = maps:fold(fun (ClientId, Pid, {Matches, Acc})
+                                    when Pid =:= DownPid ->
+                                      {[ClientId | Matches],
+                                       maps:remove(ClientId, Acc)};
+                                  (_, _, Acc) ->
+                                      Acc
+                              end, Ids),
     State = State0#machine_state{client_ids = Ids1},
-    Delta = maps:keys(Ids) -- maps:keys(Ids1),
     Effects = lists:map(fun(Id) ->
-                  [{mod_call, rabbit_log, debug,
-                    ["MQTT connection with client id '~s' failed", [Id]]}] end, Delta),
+                                [{mod_call, rabbit_log, debug,
+                                  ["MQTT connection with client id '~s' failed", [Id]]}]
+                        end, Delta),
     {State, ok, Effects ++ snapshot_effects(Meta, State)};
 
 apply(_Meta, {nodeup, Node}, State) ->
