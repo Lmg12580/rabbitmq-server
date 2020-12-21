@@ -76,7 +76,7 @@ apply(Meta, {down, DownPid, _}, #machine_state{client_ids = Ids} = State0) ->
                                        maps:remove(ClientId, Acc)};
                                   (_, _, Acc) ->
                                       Acc
-                              end, Ids),
+                              end, {[], Ids}, Ids),
     State = State0#machine_state{client_ids = Ids1},
     Effects = lists:map(fun(Id) ->
                                 [{mod_call, rabbit_log, debug,
